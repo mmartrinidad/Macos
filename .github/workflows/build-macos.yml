@@ -130,3 +130,14 @@ jobs:
       - name: Create ISO
         run: |
           sudo /Applications/Install\ macOS\ Sequoia.app/Contents/Resources/createinstallmedia --volume /Volumes/ramdisk --nointeraction
+
+        
+          # Convertir el disco RAM a archivo ISO
+          hdiutil create -o /tmp/macOS.iso -source /Volumes/ramdisk -format UDTO
+          mv /tmp/macOS.iso.cdr /tmp/macOS.iso
+      
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macOS_${{ github.event.inputs.version }}.iso
+          path: /tmp/macOS.iso

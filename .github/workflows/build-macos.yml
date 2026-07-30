@@ -2,31 +2,55 @@ name: Build macOS ISO
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'macOS version'
+        required: true
+        default: '15'
+        type: choice
+        options:
+          - '15'
+          - '14'
+          - '13'
+          - '12'
+          - '11'
+          - '10.15'
 
 jobs:
   build:
     runs-on: macos-latest
+    
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Install dependencies
-        run: brew install wget cdrtools dmg2img
+      - name: Download macOS installer
+        run: |
+          echo "📥 Descargando macOS versión ${{ github.event.inputs.version }}..."
+          softwareupdate --fetch-full-installer --full-installer-version ${{ github.event.inputs.version }}
       
-      - name: Download macOS
-        run: softwareupdate --fetch-full-installer --full-installer-version 15
+      - name: Find installer path
+        id: finder
+        run: |
+          INSTALLER_PATH=$(find /Applications -name "Install macOS*.app" -maxdepth 1 | head -n 1)
+          echo "INSTALLER_PATH=$INSTALLER_PATH" >> $GITHUB_ENV
+          echo "📂 Instalador encontrado: $INSTALLER_PATH"
       
       - name: Create RAM disk
-        run: diskutil erasevolume HFS+ "ramdisk" $(hdiutil attach -nomount ram://16777216)
+        run: |
+          echo "💾 Creando disco RAM..."
+          diskutil erasevolume HFS+ "ramdisk" $(hdiutil attach -nomount ram://16777216)
       
       - name: Create ISO
         run: |
-          sudo /Applications/Install\ macOS\ Sequoia.app/Contents/Resources/createinstallmedia --volume /Volumes/ramdisk --nointeraction
+          echo "🔨 Creando ISO..."
+          sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/ramdisk --nointeraction
           hdiutil create -o /tmp/macOS.iso -source /Volumes/ramdisk -format UDTO
           mv /tmp/macOS.iso.cdr /tmp/macOS.iso
+          echo "✅ ISO creado exitosamente"
       
-      - name: Upload
+      - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:
-          name: macOS_Sequoia_15.iso
+          name: macOS_${{ github.event.inputs.version }}.iso
           path: /tmp/macOS.iso

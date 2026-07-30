@@ -27,6 +27,92 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          brew install wget cdrtools dmg2img
+      
+      - name: Download macOS installer
+        run: |
+          # Listar instaladores disponibles
+          softwareupdate --list-full-installers
+          
+          # Descargar la versión seleccionada
+          if [ "${{ github.event.inputs.version }}" == "macOS Sequoia 15" ]; then
+            softwareupdate --fetch-full-installer --full-installer-version 15
+          elif [ "${{ github.event.inputs.version }}" == "macOS Sonoma 14" ]; then
+            softwareupdate --fetch-full-installer --full-installer-version 14
+          elif [ "${{ github.event.inputs.version }}" == "macOS Ventura 13" ]; then
+            softwareupdate --fetch-full-installer --full-installer-version 13
+          elif [ "${{ github.event.inputs.version }}" == "macOS Monterey 12" ]; then
+            softwareupdate --fetch-full-installer --full-installer-version 12
+          elif [ "${{ github.event.inputs.version }}" == "macOS Big Sur 11" ]; then
+            softwareupdate --fetch-full-installer --full-installer-version 11
+          elif [ "${{ github.event.inputs.version }}" == "macOS Catalina 10.15" ]; then
+            softwareupdate --fetch-full-installer --full-installer-version 10.15
+          fi
+      
+      - name: Create RAM disk
+        run: |
+          # Crear un disco RAM de 8 GB
+          diskutil erasevolume HFS+ "ramdisk" $(hdiutil attach -nomount ram://16777216)
+      
+      - name: Create ISO
+        run: |
+          # Obtener el nombre de la aplicación del instalador
+          INSTALLER_PATH=$(find /Applications -name "Install macOS*.app" -maxdepth 1 | head -n 1)
+          
+          if [ -z "$INSTALLER_PATH" ]; then
+            echo "❌ No se encontró el instalador de macOS"
+            exit 1
+          fi
+          
+          echo "✅ Instalador encontrado: $INSTALLER_PATH"
+          
+          # Crear el ISO usando el instalador descargado
+          sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/ramdisk --nointeraction
+          
+          # Convertir el disco RAM a archivo ISO
+          hdiutil create -o /tmp/macOS.iso -source /Volumes/ramdisk -format UDTO
+          mv /tmp/macOS.iso.cdr /tmp/macOS.iso
+      
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macOS_${{ github.event.inputs.version }}.iso
+          path: /tmp/macOS.isoname: Build macOS ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'macOS version'
+        required: true
+        default: 'macOS Sequoia 15'
+        type: choice
+        options:
+          - 'macOS Sequoia 15'
+          - 'macOS Sonoma 14'
+          - 'macOS Ventura 13'
+          - 'macOS Monterey 12'
+          - 'macOS Big Sur 11'
+          - 'macOS Catalina 10.15'
+      format:
+        description: 'Image format'
+        required: true
+        default: 'iso'
+        type: choice
+        options:
+          - 'iso'
+          - 'dmg'
+
+jobs:
+  build:
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

@@ -1,0 +1,46 @@
+name: Build macOS ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'macOS version'
+        required: true
+        default: 'macOS Sequoia 15'
+        type: choice
+        options:
+          - 'macOS Sequoia 15'
+          - 'macOS Sonoma 14'
+          - 'macOS Ventura 13'
+          - 'macOS Monterey 12'
+          - 'macOS Big Sur 11'
+          - 'macOS Catalina 10.15'
+      format:
+        description: 'Image format'
+        required: true
+        default: 'iso'
+        type: choice
+        options:
+          - 'iso'
+          - 'dmg'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          brew install wget cdrtools dmg2img
+      
+      - name: Download macOS installer
+        run: |
+          softwareupdate --list-full-installers
+          softwareupdate --fetch-full-installer --full-installer-version 15
+        continue-on-error: true
+      
+      - name: Create ISO
+        run: |
+          sudo /Applications/Install\ macOS\ Sequoia.app/Contents/Resources/createinstallmedia --volume /Volumes/ramdisk --nointeraction

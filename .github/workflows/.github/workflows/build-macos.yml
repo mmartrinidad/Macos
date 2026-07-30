@@ -1,0 +1,81 @@
+#name: Build macOS ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'macOS version'
+        required: true
+        default: 'macOS Sequoia 15'
+        type: choice
+        options:
+          - 'macOS Sequoia 15'
+          - 'macOS Sonoma 14'
+          - 'macOS Ventura 13'
+          - 'macOS Monterey 12'
+          - 'macOS Big Sur 11'
+          - 'macOS Catalina 10.15'
+      format:
+        description: 'Image format'
+        required: true
+        default: 'iso'
+        type: choice
+        options:
+          - 'iso'
+          - 'dmg'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          brew install wget cdrtools dmg2img
+      
+      - name: Download macOS installer
+        run: |
+          softwareupdate --list-full-installers
+          softwareupdate --fetch-full-installer --full-installer-version 15
+        continue-on-error: true
+      
+      - name: Create ISO
+        run: |
+          sudo /Applications/Install\ macOS\ Sequoia.app/Contents/Resources/createinstallmedia --volume /Volumes/ramdisk --nointeraction This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Runs a single command using the runners shell
+      - name: Run a one-line script
+        run: echo Hello, world!
+
+      # Runs a set of commands using the runners shell
+      - name: Run a multi-line script
+        run: |
+          echo Add other actions to build,
+          echo test, and deploy your project.

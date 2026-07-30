@@ -1,5 +1,4 @@
 name: Build macOS ISO
-
 on:
   workflow_dispatch:
     inputs:
@@ -15,32 +14,48 @@ on:
           - '12'
           - '11'
           - '10.15'
-
 jobs:
   build:
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4.2.2
-      
+
+      - name: Find full installer version
+        id: version
+        run: |
+          echo "🔍 Buscando versiones completas disponibles para macOS ${{ github.event.inputs.version }}..."
+          softwareupdate --list-full-installers
+          FULL_VERSION=$(softwareupdate --list-full-installers | grep -E "Version: ${{ github.event.inputs.version }}(\.| )" | head -n 1 | sed -E 's/.*Version: ([0-9.]+),.*/\1/')
+          if [ -z "$FULL_VERSION" ]; then
+            echo "❌ No se encontró una versión completa para ${{ github.event.inputs.version }}"
+            exit 1
+          fi
+          echo "✅ Versión completa encontrada: $FULL_VERSION"
+          echo "FULL_VERSION=$FULL_VERSION" >> $GITHUB_ENV
+
       - name: Download macOS installer
         run: |
-          echo "📥 Descargando macOS versión ${{ github.event.inputs.version }}..."
-          softwareupdate --fetch-full-installer --full-installer-version ${{ github.event.inputs.version }}
-      
+          echo "📥 Descargando macOS versión $FULL_VERSION..."
+          sudo softwareupdate --fetch-full-installer --full-installer-version "$FULL_VERSION"
+
       - name: Find installer path
         id: finder
         run: |
           INSTALLER_PATH=$(find /Applications -name "Install macOS*.app" -maxdepth 1 | head -n 1)
+          if [ -z "$INSTALLER_PATH" ]; then
+            echo "❌ No se encontró el instalador en /Applications"
+            exit 1
+          fi
           echo "INSTALLER_PATH=$INSTALLER_PATH" >> $GITHUB_ENV
           echo "📂 Instalador encontrado: $INSTALLER_PATH"
-      
+
       - name: Create RAM disk
         run: |
           echo "💾 Creando disco RAM..."
-          diskutil erasevolume HFS+ "ramdisk" $(hdiutil attach -nomount ram://16777216)
-      
+          diskutil erasevolume HFS+ "ramdisk" $(hdiutil attach -nomount ram://67108864)
+
       - name: Create ISO
         run: |
           echo "🔨 Creando ISO..."
@@ -48,9 +63,9 @@ jobs:
           hdiutil create -o /tmp/macOS.iso -source /Volumes/ramdisk -format UDTO
           mv /tmp/macOS.iso.cdr /tmp/macOS.iso
           echo "✅ ISO creado exitosamente"
-      
+
       - name: Upload ISO
         uses: actions/upload-artifact@v4.4.3
         with:
-          name: macOS_${{ github.event.inputs.version }}.iso
+          name: macOS_${{ env.FULL_VERSION }}.iso
           path: /tmp/macOS.iso

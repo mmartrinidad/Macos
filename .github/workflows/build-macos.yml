@@ -22,7 +22,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
       
       - name: Download macOS installer
         run: |
@@ -50,7 +50,7 @@ jobs:
           echo "✅ ISO creado exitosamente"
       
       - name: Upload ISO
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.4.3
         with:
           name: macOS_${{ github.event.inputs.version }}.iso
           path: /tmp/macOS.iso

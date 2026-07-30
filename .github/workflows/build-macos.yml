@@ -56,16 +56,18 @@ jobs:
           echo "💾 Creando disco RAM..."
           diskutil erasevolume HFS+ "ramdisk" $(hdiutil attach -nomount ram://67108864)
 
-      - name: Create ISO
+     - name: Create ISO
         run: |
           echo "🔨 Creando ISO..."
           sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/ramdisk --nointeraction
-          hdiutil create -o /tmp/macOS.iso -source /Volumes/ramdisk -format UDTO
+
+          VOLUME_PATH=$(find /Volumes -maxdepth 1 -iname "Install macOS*" | head -n 1)
+          if [ -z "$VOLUME_PATH" ]; then
+            echo "❌ No se encontró el volumen de instalación"
+            exit 1
+          fi
+          echo "📂 Volumen de instalación encontrado: $VOLUME_PATH"
+
+          hdiutil create -o /tmp/macOS.iso -srcfolder "$VOLUME_PATH" -format UDTO -volname "Install macOS"
           mv /tmp/macOS.iso.cdr /tmp/macOS.iso
           echo "✅ ISO creado exitosamente"
-
-      - name: Upload ISO
-        uses: actions/upload-artifact@v4.4.3
-        with:
-          name: macOS_${{ env.FULL_VERSION }}.iso
-          path: /tmp/macOS.iso

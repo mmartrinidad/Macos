@@ -56,7 +56,7 @@ jobs:
           echo "💾 Creando disco RAM..."
           diskutil erasevolume HFS+ "ramdisk" $(hdiutil attach -nomount ram://67108864)
 
-     - name: Create ISO
+       - name: Create ISO
         run: |
           echo "🔨 Creando ISO..."
           sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/ramdisk --nointeraction

@@ -69,11 +69,6 @@ jobs:
           fi
           echo "📂 Volumen de instalación encontrado: $VOLUME_PATH"
 
-          hdiutil makehybrid -iso -joliet -o /tmp/macOS.iso "$VOLUME_PATH"
+          hdiutil create -o /tmp/macOS.iso -srcfolder "$VOLUME_PATH" -format UDTO -verbose
+          mv /tmp/macOS.iso.cdr /tmp/macOS.iso
           echo "✅ ISO creado exitosamente"
-
-      - name: Upload ISO
-        uses: actions/upload-artifact@v4.4.3
-        with:
-          name: macOS_${{ env.FULL_VERSION }}.iso
-          path: /tmp/macOS.iso

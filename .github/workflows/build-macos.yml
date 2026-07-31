@@ -17,6 +17,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -68,8 +69,7 @@ jobs:
           fi
           echo "📂 Volumen de instalación encontrado: $VOLUME_PATH"
 
-          hdiutil create -o /tmp/macOS.iso -srcfolder "$VOLUME_PATH" -format UDTO -volname "Install macOS"
-          mv /tmp/macOS.iso.cdr /tmp/macOS.iso
+          hdiutil makehybrid -iso -joliet -o /tmp/macOS.iso "$VOLUME_PATH"
           echo "✅ ISO creado exitosamente"
 
       - name: Upload ISO

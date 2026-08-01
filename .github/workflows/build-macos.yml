@@ -69,6 +69,7 @@ jobs:
           fi
           echo "📂 Volumen de instalación encontrado: $VOLUME_PATH"
 
-          hdiutil create -o /tmp/macOS.iso -srcfolder "$VOLUME_PATH" -format UDTO -verbose
+          sudo hdiutil create -o /tmp/macOS.iso -srcfolder "$VOLUME_PATH" -format UDTO -verbose
+          sudo chown $(whoami) /tmp/macOS.iso.cdr
           mv /tmp/macOS.iso.cdr /tmp/macOS.iso
           echo "✅ ISO creado exitosamente"

@@ -17,7 +17,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 240
+    timeout-minutes: 120
 
     steps:
       - name: Checkout repository
@@ -52,24 +52,33 @@ jobs:
           echo "INSTALLER_PATH=$INSTALLER_PATH" >> $GITHUB_ENV
           echo "📂 Instalador encontrado: $INSTALLER_PATH"
 
-      - name: Create RAM disk
+      - name: Create sparse disk image (local storage, not RAM)
         run: |
-          echo "💾 Creando disco RAM..."
-          diskutil erasevolume HFS+ "ramdisk" $(hdiutil attach -nomount ram://67108864)
+          echo "💾 Creando imagen de disco sparse en almacenamiento local..."
+          hdiutil create -o /tmp/mac_install -size 18g -type SPARSE -fs HFS+J -volname "InstallDisk" -layout SPUD
+          hdiutil attach /tmp/mac_install.sparseimage -noverify -mountpoint /Volumes/InstallDisk
 
-      - name: Create ISO
+      - name: Create installer media on disk image
         run: |
-          echo "🔨 Creando ISO..."
-          sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/ramdisk --nointeraction
+          echo "🛠️ Creando medio de instalación..."
+          sudo "$INSTALLER_PATH/Contents/Resources/createinstallmedia" --volume /Volumes/InstallDisk --nointeraction
 
+      - name: Convert disk image to ISO
+        run: |
+          echo "🔨 Convirtiendo a ISO..."
           VOLUME_PATH=$(find /Volumes -maxdepth 1 -iname "Install macOS*" | head -n 1)
           if [ -z "$VOLUME_PATH" ]; then
             echo "❌ No se encontró el volumen de instalación"
             exit 1
           fi
-          echo "📂 Volumen de instalación encontrado: $VOLUME_PATH"
-
-          sudo hdiutil create -o /tmp/macOS.iso -srcfolder "$VOLUME_PATH" -format UDTO -verbose
-          sudo chown $(whoami) /tmp/macOS.iso.cdr
+          echo "📂 Volumen encontrado: $VOLUME_PATH"
+          hdiutil eject "$VOLUME_PATH"
+          hdiutil convert /tmp/mac_install.sparseimage -format UDTO -o /tmp/macOS.iso -verbose
           mv /tmp/macOS.iso.cdr /tmp/macOS.iso
           echo "✅ ISO creado exitosamente"
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: macOS_${{ env.FULL_VERSION }}.iso
+          path: /tmp/macOS.iso
